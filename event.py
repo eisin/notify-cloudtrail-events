@@ -1,51 +1,75 @@
 # -*- coding: utf-8 -*-
 
 from datetime import datetime
+import datetime
 from collections import OrderedDict
 import boto3
 
-class EventBase():
+class Event():
+    ignore_resourcetypes = [
+        "AWS::EC2::KeyPair",
+        "AWS::EC2::VPC",
+        "AWS::EC2::Subnet",
+        "AWS::EC2::NetworkInterface",
+        "AWS::EC2::SecurityGroup",
+    ]
     def __init__(self, event, tz):
         self.tz = tz
         for key in event.keys():
             setattr(self, key, event.get(key))
+        if isinstance(self.EventTime, float):
+            self.EventTime = datetime.fromtimestamp(self.EventTime, self.tz)
+        self.EventTime = self.EventTime.astimezone(self.tz)
 
     def make_header(self):
-        event_datetime = self.EventTime
-        if isinstance(event_datetime, float):
-            event_datetime = datetime.fromtimestamp(event_datetime, self.tz)
-        event_datetime = event_datetime.astimezone(self.tz)
-        event_datetime_disp = event_datetime.strftime("%Y/%m/%d(%a) %H:%M").decode('utf-8')
-        event_time_disp = event_datetime.strftime("%H:%M").decode('utf-8')
-        return u"\n".join((
-            u"■{1} {0.Username}".format(self, event_datetime_disp),
-            u"  ({1}) {0.EventName}".format(self, event_time_disp),
-        ))
+        event_datetime_disp = self.EventTime.strftime("%Y/%m/%d(%a) %H:%M").decode('utf-8')
+        event_time_disp = self.EventTime.strftime("%H:%M").decode('utf-8')
+        return u"■{1} by {0.Username}".format(self, event_datetime_disp)
 
-class EventInstance(EventBase):
-    def __init__(self, event, tz):
-        EventBase.__init__(self, event, tz)
+    def make_event_line(self):
+        event_datetime_disp = self.EventTime.strftime("%Y/%m/%d(%a) %H:%M").decode('utf-8')
+        event_time_disp = self.EventTime.strftime("%H:%M").decode('utf-8')
+        return u"  ({1}) {0.EventName}".format(self, event_time_disp)
 
-    def display(self):
-        header = self.make_header()
-        parameters = OrderedDict()
-        for resource in self.Resources:
-            if resource.get("ResourceType") == "AWS::EC2::Instance":
-                instance_name = EventInstance.get_instance_name(resource.get("ResourceName"))
-                if not instance_name is None:
-                    parameters[resource.get("ResourceType")] = "{0} ({1})".format(
-                        resource.get("ResourceName"), instance_name)
+    def make_event_parameters(self):
+        result = []
+        for resource_dict in self.Resources:
+            resourcetype = resource_dict.get('ResourceType')
+            resourcetype_disp = resourcetype
+            resourcetype_disp = resourcetype.replace("AWS::", "")
+            resourcetype_disp = resourcetype_disp.replace("::", " ")
+            resourcename = resource_dict.get('ResourceName')
+            description = None
+            if resourcetype in self.ignore_resourcetypes:
                 continue
-            parameters[resource.get("ResourceType")] = resource.get("ResourceName")
-                
-        output = [header]
-        for param in  parameters.keys():
-            output.append(u"    [{0}] {1}".format(param, parameters[param]))
+            if resourcetype == "AWS::EC2::Instance":
+                description = Event.get_instance_name(resourcename)
+            if resourcetype == "AWS::EC2::Ami":
+                image = Event.retreive_image_by_image_id(resourcename)
+                description = image.description
+            if description is None:
+                result.append(u"          - [{0}] {1}".format(resourcetype_disp, resourcename))
+            else:
+                result.append(u"          - [{0}] {2} ({1})".format(resourcetype_disp, resourcename, description))
+        return result
+
+    def display(self, before_event = None):
+        header = self.make_header()
+        output = []
+        header_skip = False
+        if not before_event is None:
+            delta = self.EventTime - before_event.EventTime
+            if self.Username == before_event.Username and delta < datetime.timedelta(hours=1):
+                header_skip = True
+        if not header_skip:
+            output.append(self.make_header())
+        output.append(self.make_event_line())
+        output.extend(self.make_event_parameters())
         return u"\n".join(output)
 
     @classmethod
     def get_instance_name(cls, target_instance_id):
-        instances_list = EventInstance.instances()
+        instances_list = Event.instances()
         for i in instances_list:
             if i.instance_id == target_instance_id:
                 for tag in i.tags:
@@ -68,22 +92,9 @@ class EventInstance(EventBase):
         for instance in ec2.instances.all():
             result.append(instance)
         return result
-                
-        
 
-class EventOther(EventBase):
-    #ignore_field = ['EventId', 'EventTime', 'tz', 'CloudTrailEvent', 'EventName', 'Username']
-    ignore_field = []
-    def __init__(self, event, tz):
-        EventBase.__init__(self, event, tz)
-
-    def display(self):
-        header = self.make_header()
-        #return header
-        #event_dict = vars(self)
-        output = [header]
-        for resource_dict in self.Resources:
-            if resource_dict.get('ResourceType') in self.ignore_field:
-                continue
-            output.append(u"    [{0}] {1}".format(resource_dict.get('ResourceType'), resource_dict.get('ResourceName')))
-        return u"\n".join(output)
+    @classmethod
+    def retreive_image_by_image_id(cls, image_id):
+        result = []
+        ec2 = boto3.resource('ec2')
+        return ec2.Image(image_id)
