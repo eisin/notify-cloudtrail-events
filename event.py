@@ -5,21 +5,26 @@ from collections import OrderedDict
 import boto3
 
 class EventBase():
-    def make_header(self):
-        event_time = datetime.fromtimestamp(self.EventTime, self.tz)
-        #event_time_disp = event_time.strftime("%Y/%m/%d %H:%M")
-        event_time_disp = event_time.strftime("%Y/%m/%d(%a) %H:%M").decode('utf-8')
-        #return u"■{1} {0.EventName} ({0.Username})".format(self, event_time_disp)
-        return u"\n".join((
-            u"■{1} ({0.Username})".format(self, event_time_disp),
-            u"{0.EventName}".format(self),
-        ))
-
-class EventInstance(EventBase):
     def __init__(self, event, tz):
         self.tz = tz
         for key in event.keys():
             setattr(self, key, event.get(key))
+
+    def make_header(self):
+        event_datetime = self.EventTime
+        if isinstance(event_datetime, float):
+            event_datetime = datetime.fromtimestamp(event_datetime, self.tz)
+        event_datetime = event_datetime.astimezone(self.tz)
+        event_datetime_disp = event_datetime.strftime("%Y/%m/%d(%a) %H:%M").decode('utf-8')
+        event_time_disp = event_datetime.strftime("%H:%M").decode('utf-8')
+        return u"\n".join((
+            u"■{1} {0.Username}".format(self, event_datetime_disp),
+            u"  ({1}) {0.EventName}".format(self, event_time_disp),
+        ))
+
+class EventInstance(EventBase):
+    def __init__(self, event, tz):
+        EventBase.__init__(self, event, tz)
 
     def display(self):
         header = self.make_header()
@@ -70,9 +75,7 @@ class EventOther(EventBase):
     #ignore_field = ['EventId', 'EventTime', 'tz', 'CloudTrailEvent', 'EventName', 'Username']
     ignore_field = []
     def __init__(self, event, tz):
-        self.tz = tz
-        for key in event.keys():
-            setattr(self, key, event.get(key))
+        EventBase.__init__(self, event, tz)
 
     def display(self):
         header = self.make_header()

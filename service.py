@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import boto3
 import json
 
 #from event import *
@@ -20,8 +21,11 @@ def handler(event, context):
     f = open('lookup_events.txt')
     json_text = f.read()
     f.close()
-
     logs = json.loads(json_text)
+
+    cloudtrail = boto3.client('cloudtrail')
+    logs = cloudtrail.lookup_events()
+
     event_list = logs.get("Events")
     event_list.reverse()
     for event_dict in event_list:
