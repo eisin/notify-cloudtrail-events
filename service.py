@@ -21,15 +21,13 @@ def handler(lambda_event, lambda_context):
     locale.setlocale(locale.LC_ALL, 'ja_JP.utf-8')
     ignore_event_names = 'PutEvaluations'.split(",")
 
-    f = open('lookup_events.txt')
-    json_text = f.read()
-    f.close()
-    logs = json.loads(json_text)
+    startdatetime = datetime.datetime.now(tz).replace(hour=0, minute=0, second=0, microsecond=0) - datetime.timedelta(days=1)
+    enddatetime = startdatetime + datetime.timedelta(days=1)
 
     cloudtrail = boto3.client('cloudtrail')
     event_list = []
 
-    logs = cloudtrail.lookup_events()
+    logs = cloudtrail.lookup_events(StartTime=startdatetime, EndTime=enddatetime)
     event_result = logs.get("Events")
     while len(event_result) > 0:
         for event_dict in event_result:
