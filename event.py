@@ -4,6 +4,7 @@ from datetime import datetime
 import datetime
 from collections import OrderedDict
 import boto3
+import re
 
 class Event():
     ignore_resourcetypes = [
@@ -34,23 +35,35 @@ class Event():
     def make_event_parameters(self):
         result = []
         for resource_dict in self.Resources:
-            resourcetype = resource_dict.get('ResourceType')
+            result_local = []
+            resourcetype = resource_dict.get('ResourceType', "")
             resourcetype_disp = resourcetype
             resourcetype_disp = resourcetype.replace("AWS::", "")
             resourcetype_disp = resourcetype_disp.replace("::", " ")
-            resourcename = resource_dict.get('ResourceName')
+            resourcename = resource_dict.get('ResourceName', "")
             description = None
             if resourcetype in self.ignore_resourcetypes:
                 continue
             if resourcetype == "AWS::EC2::Instance":
-                description = Event.get_instance_name(resourcename)
+                tags_dict = Event.get_instance_tags(resourcename)
+                if tags_dict:
+                    for key, value in tags_dict.iteritems():
+                        result_local.append(u"            <{0}> {1}".format(key, value))
+            if resourcetype == "" and re.match(r"^i-[0-9a-z]+$", resourcename):
+                tags_dict = Event.get_instance_tags(resourcename)
+                if tags_dict:
+                    for key, value in tags_dict.iteritems():
+                        result_local.append(u"            <{0}> {1}".format(key, value))
             if resourcetype == "AWS::EC2::Ami":
                 image = Event.retreive_image_by_image_id(resourcename)
                 description = image.description
+            if resourcetype_disp != "":
+                resourcetype_disp = "[{0}] ".format(resourcetype_disp)
             if description is None:
-                result.append(u"          - [{0}] {1}".format(resourcetype_disp, resourcename))
+                result.append(u"          - {0}{1}".format(resourcetype_disp, resourcename))
             else:
-                result.append(u"          - [{0}] {2} ({1})".format(resourcetype_disp, resourcename, description))
+                result.append(u"          - {0}{2} ({1})".format(resourcetype_disp, resourcename, description))
+            result.extend(result_local)
         return result
 
     def display(self, before_event = None):
@@ -78,11 +91,21 @@ class Event():
         return None
 
     @classmethod
+    def get_instance_tags(cls, target_instance_id):
+        instances_list = Event.instances()
+        tags_dict = OrderedDict()
+        for i in instances_list:
+            if i.instance_id == target_instance_id:
+                for tag in i.tags:
+                    tags_dict[tag['Key']] = tag['Value']
+                return tags_dict
+        return None
+
+    @classmethod
     def instances(cls):
         if cls._instances is None:
             cls._instances = cls.retreive_instances()
         return cls._instances
-    #instances._instances = None
     _instances = None
 
     @classmethod

@@ -19,10 +19,12 @@ import event
 def handler(lambda_event, lambda_context):
     tz = pytz.timezone('Asia/Tokyo')
     locale.setlocale(locale.LC_ALL, 'ja_JP.utf-8')
-    ignore_event_names = 'PutEvaluations'.split(",")
+    ignore_event_names = 'ConsoleLogin,PutEvaluations'.split(",")
 
-    startdatetime = datetime.datetime.now(tz).replace(hour=0, minute=0, second=0, microsecond=0) - datetime.timedelta(days=1)
-    enddatetime = startdatetime + datetime.timedelta(days=1)
+    #startdatetime = datetime.datetime.now(tz).replace(hour=0, minute=0, second=0, microsecond=0) - datetime.timedelta(days=1)
+    #enddatetime = startdatetime + datetime.timedelta(days=1)
+    startdatetime = datetime.datetime.now(tz).replace(minute=0, second=0, microsecond=0) - datetime.timedelta(hours=1)
+    enddatetime = startdatetime + datetime.timedelta(hours=1)
 
     cloudtrail = boto3.client('cloudtrail')
     event_list = []
