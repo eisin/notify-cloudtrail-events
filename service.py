@@ -16,7 +16,7 @@ import locale
 
 import event
 
-def handler(event, context):
+def handler(lambda_event, lambda_context):
     tz = pytz.timezone('Asia/Tokyo')
     locale.setlocale(locale.LC_ALL, 'ja_JP.utf-8')
     ignore_event_names = 'PutEvaluations'.split(",")
@@ -27,23 +27,28 @@ def handler(event, context):
     logs = json.loads(json_text)
 
     cloudtrail = boto3.client('cloudtrail')
-    logs = cloudtrail.lookup_events()
+    event_list = []
 
-    event_list = logs.get("Events")
+    logs = cloudtrail.lookup_events()
+    event_result = logs.get("Events")
+    while len(event_result) > 0:
+        for event_dict in event_result:
+            event_obj = event.Event(event_dict, tz)
+
+            if event_obj.EventName in ignore_event_names:
+                continue
+            event_list.append(event_obj)
+    
+        if logs.get("NextToken"):
+            logs = cloudtrail.lookup_events(NextToken=logs.get("NextToken"))
+            event_result = logs.get("Events")
+        else:
+            break
+
     event_list.reverse()
     event_old = None
-    for event_dict in event_list:
-        event = event_new(event_dict, tz)
+    for event_obj in event_list:
+        print event_obj.display(event_old)
+        event_old = event_obj
 
-        if event.EventName in ignore_event_names:
-            continue
-        print event.display(event_old)
-        event_old = event
-    
     return 0
-
-def event_new(event_dict, tz):
-    #if event_dict.get("EventName") in ['StartInstances', 'StopInstances']:
-    #    return event.EventInstance(event_dict, tz)
-    #return event.EventOther(event_dict, tz)
-    return event.Event(event_dict, tz)
