@@ -17,16 +17,21 @@ import locale
 import event
 
 def handler(lambda_event, lambda_context):
-    tz = pytz.timezone('Asia/Tokyo')
-    locale.setlocale(locale.LC_ALL, 'ja_JP.utf-8')
-    ignore_event_names = 'ConsoleLogin,PutEvaluations,CreateLogStream'.split(",")
-    sns_arn = 'arn:aws:sns:ap-northeast-1:626676598765:notify-aws-service'
-    sns_subject = u"[AWS]CloudTrail report"
+    tz = pytz.timezone(os.environ.get('tz', 'Asia/Tokyo'))
+    locale.setlocale(locale.LC_ALL, os.environ.get('ja_JP.utf-8'))
+    ignore_event_names = os.environ.get('ignore_event_names', '').split(":")
+    sns_arn = os.environ.get('sns_arn', '')
+    sns_subject = os.environ.get('sns_subject', '')
+    target_duration = os.environ.get('target_duration', '1hour') # 1hour or 1day
 
-    #startdatetime = datetime.datetime.now(tz).replace(hour=0, minute=0, second=0, microsecond=0) - datetime.timedelta(days=1)
-    #enddatetime = startdatetime + datetime.timedelta(days=1)
-    startdatetime = datetime.datetime.now(tz).replace(minute=0, second=0, microsecond=0) - datetime.timedelta(hours=1)
-    enddatetime = startdatetime + datetime.timedelta(hours=1)
+    if target_duration == "1hour":
+        startdatetime = datetime.datetime.now(tz).replace(minute=0, second=0, microsecond=0) - datetime.timedelta(hours=1)
+        enddatetime = startdatetime + datetime.timedelta(hours=1)
+    elif target_duration == "1day":
+        startdatetime = datetime.datetime.now(tz).replace(hour=0, minute=0, second=0, microsecond=0) - datetime.timedelta(days=1)
+        enddatetime = startdatetime + datetime.timedelta(days=1)
+    else:
+        return 2
 
     cloudtrail = boto3.client('cloudtrail')
     event_list = []
