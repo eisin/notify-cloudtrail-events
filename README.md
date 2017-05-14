@@ -1,6 +1,6 @@
 # notify-cloudtrail-events
 
-This lambda function is intended to be called repeatedly, it checks recent CloudTrail events and send to SNS. 
+This lambda function is intended to be called repeatedly, it checks recent CloudTrail events and sends to SNS. 
 
 ### Environments
 
