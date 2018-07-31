@@ -51,7 +51,7 @@ def handler(lambda_event, lambda_context):
             event_list.append(event_obj)
     
         if logs.get("NextToken"):
-            logs = cloudtrail.lookup_events(NextToken=logs.get("NextToken"))
+            logs = cloudtrail.lookup_events(NextToken=logs.get("NextToken"), StartTime=startdatetime, EndTime=enddatetime)
             event_result = logs.get("Events")
         else:
             break
