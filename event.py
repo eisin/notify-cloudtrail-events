@@ -16,6 +16,12 @@ class Event():
     ]
     def __init__(self, event, tz):
         self.tz = tz
+        self.EventId = None
+        self.EventName = None
+        self.Username = None
+        self.ResourceType = None
+        self.ResourceName = None
+        self.EventSource = None
         for key in event.keys():
             setattr(self, key, event.get(key))
         if isinstance(self.EventTime, float):
