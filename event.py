@@ -61,8 +61,11 @@ class Event():
                     for key, value in tags_dict.iteritems():
                         result_local.append(u"            <{0}> {1}".format(key, value))
             if resourcetype == "AWS::EC2::Ami":
-                image = Event.retreive_image_by_image_id(resourcename)
-                description = image.description
+                try:
+                    image = Event.retreive_image_by_image_id(resourcename)
+                    description = image.description
+                except:
+                    pass
             if resourcetype_disp != "":
                 resourcetype_disp = "[{0}] ".format(resourcetype_disp)
             if description is None:
