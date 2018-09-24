@@ -1,6 +1,6 @@
 # notify-cloudtrail-events
 
-This lambda function is intended to be called repeatedly, it checks recent CloudTrail events and sends to SNS. 
+This lambda function is intended to be called repeatedly, it checks recent CloudTrail events and sends summary text to SNS.
 
 ### Environments
 
@@ -9,8 +9,11 @@ This lambda function is intended to be called repeatedly, it checks recent Cloud
 - ```locale```: Locale (default: ```ja_JP.utf-8```)
 - ```sns_arn```: SNS ARN
 - ```sns_subject```: Message Subject
-- ```ignore_event_names```: Event names to ignore (default: none, recommended: ```ConsoleLogin:PutEvaluations:CreateLogStream:CreateNetworkInterface:DeleteNetworkInterface:ChangePassword```)
+- ```ignore_event_names```: Event names to ignore (default: none, recommended: ```CreateNetworkInterface:DeleteNetworkInterface```)
 - ```ignore_user_names```: Users to ignore (default: none)
+
+This function ignores following events implicitly:
+```"List*", "Describe*", "Get*", "CheckMfa", "Decrypt", "Lookup*", "PutEvaluations", "CreateLogStream"```
 
 ### Example Output
 
