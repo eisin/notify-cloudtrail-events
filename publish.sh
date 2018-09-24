@@ -15,6 +15,6 @@ fi
 
 aws lambda update-function-code --function-name notify-cloudtrail-events --zip-file fileb://${DISTFILE}
 aws lambda update-function-configuration --function-name notify-cloudtrail-events \
-  --environment 'Variables={tz=Asia/Tokyo,locale=ja_JP.utf-8,ignore_event_names=ConsoleLogin:PutEvaluations:CreateLogStream,sns_arn=arn:aws:sns:ap-northeast-1:626676598765:notify-aws-service,sns_subject="[AWS]CloudTrail report",target_duration=1hour}' \
+  --environment 'Variables={tz=Asia/Tokyo,locale=ja_JP.utf-8,ignore_event_names=,sns_arn=arn:aws:sns:ap-northeast-1:626676598765:notify-aws-service,sns_subject="[AWS]CloudTrail report",target_duration=1hour}' \
   --timeout 15 \
   --memory-size 256

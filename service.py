@@ -13,6 +13,7 @@ import json
 import datetime
 import pytz
 import locale
+import fnmatch
 
 import event
 
@@ -20,6 +21,7 @@ def handler(lambda_event, lambda_context):
     tz = pytz.timezone(os.environ.get('tz', 'Asia/Tokyo'))
     locale.setlocale(locale.LC_ALL, os.environ.get('ja_JP.utf-8'))
     ignore_event_names = os.environ.get('ignore_event_names', '').split(":")
+    ignore_event_names += ["List*", "Describe*", "Get*", "CheckMfa", "Decrypt", "Lookup*", "PutEvaluations", "CreateLogStream"]
     ignore_user_names = os.environ.get('ignore_user_names', '').split(":")
     sns_arn = os.environ.get('sns_arn', '')
     sns_subject = os.environ.get('sns_subject', '')
@@ -43,12 +45,24 @@ def handler(lambda_event, lambda_context):
         for event_dict in event_result:
             event_obj = event.Event(event_dict, tz)
 
-            if event_obj.EventName in ignore_event_names:
-                continue
-            if event_obj.Username in ignore_user_names:
-                continue
+            event_name = event_obj.EventName
+            if event_name is None:
+                event_name = ""
+            user_name = event_obj.Username
+            if user_name is None:
+                user_name = ""
+            matched = False
+            for ignore_event_name in ignore_event_names:
+                if fnmatch.fnmatch(event_name, ignore_event_name):
+                    matched = True
+                    continue
+            for ignore_user_name in ignore_user_names:
+                if fnmatch.fnmatch(user_name, ignore_user_name):
+                    matched = True
+                    continue
 
-            event_list.append(event_obj)
+            if not matched:
+                event_list.append(event_obj)
     
         if logs.get("NextToken"):
             logs = cloudtrail.lookup_events(NextToken=logs.get("NextToken"), StartTime=startdatetime, EndTime=enddatetime)
