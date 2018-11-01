@@ -21,8 +21,9 @@ def handler(lambda_event, lambda_context):
     tz = pytz.timezone(os.environ.get('tz', 'Asia/Tokyo'))
     locale.setlocale(locale.LC_ALL, os.environ.get('ja_JP.utf-8'))
     ignore_event_names = os.environ.get('ignore_event_names', '').split(":")
-    ignore_event_names += ["List*", "Describe*", "Get*", "CheckMfa", "Decrypt", "Lookup*", "PutEvaluations", "CreateLogStream", "AssumeRole"]
+    ignore_event_names += ["List*", "Describe*", "Get*", "CheckMfa", "Decrypt", "Lookup*", "PutEvaluations", "CreateLogStream", "AssumeRole", "Discover*", "Submit*StateChange"]
     ignore_user_names = os.environ.get('ignore_user_names', '').split(":")
+    ignore_user_names += ["ecs-eni-provisioning"]
     sns_arn = os.environ.get('sns_arn', '')
     sns_subject = os.environ.get('sns_subject', '')
     target_duration = os.environ.get('target_duration', '1hour') # 1hour or 1day
