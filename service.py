@@ -40,7 +40,7 @@ def handler(lambda_event, lambda_context):
     cloudtrail = boto3.client('cloudtrail')
     event_list = []
 
-    logs = cloudtrail.lookup_events(StartTime=startdatetime, EndTime=enddatetime)
+    logs = cloudtrail.lookup_events(StartTime=startdatetime, EndTime=enddatetime, LookupAttributes=[{'AttributeKey': 'ReadOnly', 'AttributeValue': 'false'},],)
     event_result = logs.get("Events")
     while len(event_result) > 0:
         for event_dict in event_result:
